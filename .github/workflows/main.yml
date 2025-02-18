@@ -40,9 +40,31 @@ jobs:
           path: web/build
       - uses: dtolnay/rust-toolchain@stable
       - name: Build w/ experimental rippers
-        run: cargo build --release --features experimental_rippers
+        run: |
+          cargo build --release --features experimental_rippers
+          mv target/release/cambia${{ matrix.os == 'windows-latest' && '.exe' || '' }} target/release/cambia-${{ matrix.os }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
           name: cambia-${{ matrix.os }}
-          path: target/release/cambia${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          path: target/release/cambia-${{ matrix.os }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+  release:
+    name: Create Release
+    needs: cargo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: cambia-*
+          merge-multiple: true
+          path: ./binaries
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./binaries/**
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
